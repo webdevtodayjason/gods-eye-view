@@ -16,10 +16,28 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 
 const server = await createServer({
-  server: { host, port, strictPort: true, watch: null, hmr: false },
+  server: { host, port, strictPort: true, hmr: false },
+  // watch:null has to be applied to the RESOLVED config, not passed inline:
+  // mergeConfig drops null overrides, so an inline server.watch:null silently
+  // vanishes when merged with vite.config.js and the watcher starts anyway.
+  // configResolved runs before _createServer reads serverConfig.watch.
+  plugins: [{
+    name: 'gev-disable-watcher',
+    configResolved(resolved) {
+      resolved.server.watch = null;
+    },
+  }],
 });
 await server.listen();
 server.printUrls();
+
+// The watcher is the whole reason this entrypoint exists. Assert the resolved
+// value directly: the last regression was an inline watch:null being silently
+// dropped by mergeConfig, which looks identical to success until the host runs
+// out of inotify instances.
+if (server.config.server.watch !== null) {
+  throw new Error('server.watch is not null; the watcher would start (see gev-disable-watcher)');
+}
 
 // npm/sh would swallow these; owning the process means docker stop is clean
 // instead of a 10s SIGKILL wait on every redeploy.
