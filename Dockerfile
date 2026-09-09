@@ -24,4 +24,4 @@ COPY . .
 # HOST=0.0.0.0 also flips vite's allowedHosts to true, which is what lets this
 # answer on a proxied hostname instead of only localhost.
 EXPOSE 4173
-CMD ["npm", "run", "dev"]
+CMD ["node", "scripts/serve-container.mjs"]
